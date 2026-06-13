@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artin gpt Web UI V1.7</title>
+    <title>Artin gpt Web UI V1.7 (With Vision, PDF & Files)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -15,6 +15,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- PDF.js for Reading PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ececf1; }
@@ -84,9 +87,9 @@
                 <div class="flex items-center bg-[#252526] rounded-xl shadow-lg border border-gray-600 focus-within:border-gray-400 p-2">
                     
                     <!-- File Input Hidden -->
-                    <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)">
+                    <input type="file" id="file-input" class="hidden" accept="image/*,.txt,.py,.js,.html,.css,.json,.md,.csv,.pdf" onchange="handleFileUpload(event)">
                     
-                    <button onclick="document.getElementById('file-input').click()" class="p-2 text-gray-400 hover:text-white rounded-lg transition-colors" title="پیوست فایل (عکس، متن، کد)">
+                    <button onclick="document.getElementById('file-input').click()" class="p-2 text-gray-400 hover:text-white rounded-lg transition-colors" title="پیوست فایل (عکس، PDF، متن، کد)">
                         <i class="fa fa-paperclip"></i>
                     </button>
                     
@@ -146,6 +149,9 @@
     </div>
 
     <script>
+        // تنظیمات ورکر برای PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         const API_URL = 'https://passive-chubby-shelf.ngrok-free.dev/v1/chat/completions';
 
         const MAX_TOKENS = 36671;
@@ -177,8 +183,8 @@
             updateThinkButtonState();
         });
 
-        // ================= فایل‌ها و پیوست =================
-        function handleFileUpload(event) {
+        // ================= فایل‌ها و پیوست (شامل PDF) =================
+        async function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
@@ -188,9 +194,33 @@
                 return;
             }
 
-            const reader = new FileReader();
-            
-            if (file.type.startsWith('image/')) {
+            // نمایش حالت بارگذاری در صورت انتخاب PDF (چون استخراج متن زمان می‌برد)
+            if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const typedarray = new Uint8Array(e.target.result);
+                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                        let fullText = '';
+                        
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            const pageText = textContent.items.map(item => item.str).join(' ');
+                            fullText += `\n\n--- صفحه ${i} ---\n` + pageText;
+                        }
+
+                        currentAttachment = { type: 'text', data: fullText.trim(), name: file.name };
+                        renderAttachmentPreview();
+                    } catch (error) {
+                        alert('خطا در خواندن فایل PDF. ممکن است فایل خراب یا رمزنگاری شده باشد.');
+                        console.error(error);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } 
+            else if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
                 reader.onload = function(e) {
                     currentAttachment = { type: 'image', data: e.target.result, name: file.name };
                     renderAttachmentPreview();
@@ -198,6 +228,7 @@
                 reader.readAsDataURL(file);
             } 
             else if (file.type.startsWith('text/') || file.name.match(/\.(js|py|html|css|json|md|csv|txt|sh|cpp|c|java|xml)$/i)) {
+                const reader = new FileReader();
                 reader.onload = function(e) {
                     currentAttachment = { type: 'text', data: e.target.result, name: file.name };
                     renderAttachmentPreview();
@@ -228,15 +259,20 @@
                     </div>
                 `;
             } else {
+                // بررسی اینکه فایل PDF است یا متنی معمولی برای آیکون
+                const isPdf = currentAttachment.name.toLowerCase().endsWith('.pdf');
+                const iconClass = isPdf ? 'fa-file-pdf text-red-500' : 'fa-file-alt text-gray-400';
+                const fileTypeLabel = isPdf ? 'PDF Document' : 'Text File';
+
                 contentHtml = `
                     <div class="relative bg-[#353535] rounded-md py-1 px-3 flex flex-col justify-center max-w-[150px] min-w-[100px]">
                         <button onclick="removeAttachment()" class="absolute -top-2 -right-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md transition z-10"><i class="fa fa-times"></i></button>
                         <div class="flex items-center gap-2">
                             <div class="flex-1 min-w-0">
                                 <p class="text-xs text-white truncate" dir="ltr">${currentAttachment.name}</p>
-                                <p class="text-[10px] text-gray-400">Text</p>
+                                <p class="text-[10px] text-gray-400">${fileTypeLabel}</p>
                             </div>
-                            <i class="fa fa-file-alt text-gray-400 text-xl"></i>
+                            <i class="fa ${iconClass} text-xl"></i>
                         </div>
                     </div>
                 `;
@@ -528,7 +564,7 @@
             // ترکیب متن و پیوست
             if (currentAttachment) {
                 if (currentAttachment.type === 'text') {
-                    userContent = `${text}\n\n--- فایل: ${currentAttachment.name} ---\n${currentAttachment.data}\n--- پایان فایل ---`;
+                    userContent = `${text}\n\n--- محتوای فایل: ${currentAttachment.name} ---\n${currentAttachment.data}\n--- پایان فایل ---`;
                 } else if (currentAttachment.type === 'image') {
                     userContent = [
                         { type: "text", text: text || "این عکس را توصیف کن." },
