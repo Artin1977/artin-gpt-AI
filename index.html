@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artin gpt Web UI V1.7 (With Vision, PDF & Files)</title>
+    <title>Artin gpt Web UI V1.8 (Multi-File, Vision & PDF)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -28,7 +28,7 @@
         .markdown-body code { font-family: monospace; color: #10b981; }
         .think-box { border-left: 4px solid #6b7280; background-color: #262626; padding: 0.5rem 1rem; margin: 0.5rem 0; border-radius: 0.25rem; font-style: italic; color: #9ca3af; }
         /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #565869; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #acacbe; }
@@ -79,15 +79,15 @@
         <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#1e1e1e] via-[#1e1e1e] to-transparent p-4 z-20">
             <div class="max-w-4xl mx-auto relative">
                 
-                <!-- Attachment Preview -->
-                <div id="attachment-preview" class="hidden absolute bottom-[calc(100%+0.5rem)] right-0 bg-[#252526] p-2 rounded-lg border border-gray-600 shadow-lg mb-2">
+                <!-- Attachment Preview (Multi-file) -->
+                <div id="attachment-preview" class="hidden absolute bottom-[calc(100%+0.5rem)] right-0 bg-[#252526] p-2 rounded-lg border border-gray-600 shadow-lg mb-2 max-w-full overflow-x-auto">
                     <!-- محتوای پیوست با جاوااسکریپت تزریق می‌شود -->
                 </div>
 
                 <div class="flex items-center bg-[#252526] rounded-xl shadow-lg border border-gray-600 focus-within:border-gray-400 p-2">
                     
-                    <!-- File Input Hidden -->
-                    <input type="file" id="file-input" class="hidden" accept="image/*,.txt,.py,.js,.html,.css,.json,.md,.csv,.pdf" onchange="handleFileUpload(event)">
+                    <!-- File Input Hidden (Added 'multiple') -->
+                    <input type="file" id="file-input" class="hidden" multiple accept="image/*,.txt,.py,.js,.html,.css,.json,.md,.csv,.pdf" onchange="handleFileUpload(event)">
                     
                     <button onclick="document.getElementById('file-input').click()" class="p-2 text-gray-400 hover:text-white rounded-lg transition-colors" title="پیوست فایل (عکس، PDF، متن، کد)">
                         <i class="fa fa-paperclip"></i>
@@ -167,8 +167,8 @@
         let isGenerating = false;
         let editingMessageIndex = -1;
 
-        // متغیرهای پیوست فایل
-        let currentAttachment = null; // { type: 'image' | 'text', data: string, name: string }
+        // آرایه‌ای برای مدیریت فایل‌های پیوست‌شده همزمان
+        let currentAttachments = []; 
 
         // Init
         document.addEventListener('DOMContentLoaded', () => {
@@ -183,109 +183,123 @@
             updateThinkButtonState();
         });
 
-        // ================= فایل‌ها و پیوست (شامل PDF) =================
+        // ================= فایل‌ها و پیوست‌های چندگانه =================
         async function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
 
-            if (file.size > 5 * 1024 * 1024) {
-                alert('حجم فایل نباید بیشتر از ۵ مگابایت باشد.');
-                event.target.value = '';
-                return;
+            document.getElementById('send-btn').disabled = true; // جلوگیری از ارسال تا زمان لود فایل‌ها
+            document.getElementById('send-btn').classList.add('opacity-50');
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+
+                if (file.size > 5 * 1024 * 1024) {
+                    alert(`حجم فایل ${file.name} بیشتر از ۵ مگابایت است و نادیده گرفته شد.`);
+                    continue;
+                }
+
+                await processFile(file);
             }
 
-            // نمایش حالت بارگذاری در صورت انتخاب PDF (چون استخراج متن زمان می‌برد)
-            if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    try {
-                        const typedarray = new Uint8Array(e.target.result);
-                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                        let fullText = '';
-                        
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const textContent = await page.getTextContent();
-                            const pageText = textContent.items.map(item => item.str).join(' ');
-                            fullText += `\n\n--- صفحه ${i} ---\n` + pageText;
-                        }
-
-                        currentAttachment = { type: 'text', data: fullText.trim(), name: file.name };
-                        renderAttachmentPreview();
-                    } catch (error) {
-                        alert('خطا در خواندن فایل PDF. ممکن است فایل خراب یا رمزنگاری شده باشد.');
-                        console.error(error);
-                    }
-                };
-                reader.readAsArrayBuffer(file);
-            } 
-            else if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    currentAttachment = { type: 'image', data: e.target.result, name: file.name };
-                    renderAttachmentPreview();
-                };
-                reader.readAsDataURL(file);
-            } 
-            else if (file.type.startsWith('text/') || file.name.match(/\.(js|py|html|css|json|md|csv|txt|sh|cpp|c|java|xml)$/i)) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    currentAttachment = { type: 'text', data: e.target.result, name: file.name };
-                    renderAttachmentPreview();
-                };
-                reader.readAsText(file);
-            } else {
-                alert('این فرمت فایل پشتیبانی نمی‌شود.');
-            }
-            
+            renderAttachmentPreview();
             event.target.value = ''; 
+            
+            document.getElementById('send-btn').disabled = false;
+            document.getElementById('send-btn').classList.remove('opacity-50');
+        }
+
+        // تابع برای پردازش هر فایل به صورت مستقل (Promisified)
+        function processFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                
+                if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
+                    reader.onload = async function(e) {
+                        try {
+                            const typedarray = new Uint8Array(e.target.result);
+                            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                            let fullText = '';
+                            
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const textContent = await page.getTextContent();
+                                const pageText = textContent.items.map(item => item.str).join(' ');
+                                fullText += `\n\n--- صفحه ${i} ---\n` + pageText;
+                            }
+
+                            currentAttachments.push({ type: 'text', data: fullText.trim(), name: file.name });
+                        } catch (error) {
+                            console.error(`خطا در خواندن فایل PDF ${file.name}:`, error);
+                        }
+                        resolve();
+                    };
+                    reader.readAsArrayBuffer(file);
+                } 
+                else if (file.type.startsWith('image/')) {
+                    reader.onload = function(e) {
+                        currentAttachments.push({ type: 'image', data: e.target.result, name: file.name });
+                        resolve();
+                    };
+                    reader.readAsDataURL(file);
+                } 
+                else { // سایر فایل‌های متنی و کد
+                    reader.onload = function(e) {
+                        currentAttachments.push({ type: 'text', data: e.target.result, name: file.name });
+                        resolve();
+                    };
+                    reader.readAsText(file);
+                }
+            });
         }
 
         function renderAttachmentPreview() {
             const previewBox = document.getElementById('attachment-preview');
-            if (!currentAttachment) {
+            if (currentAttachments.length === 0) {
                 previewBox.classList.add('hidden');
                 return;
             }
             
             previewBox.classList.remove('hidden');
-            let contentHtml = '';
+            let contentHtml = '<div class="flex gap-3 whitespace-nowrap pb-1">';
             
-            if (currentAttachment.type === 'image') {
-                contentHtml = `
-                    <div class="relative group p-1 bg-white rounded flex items-center justify-center">
-                        <button onclick="removeAttachment()" class="absolute -top-2 -right-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md transition z-10"><i class="fa fa-times"></i></button>
-                        <img src="${currentAttachment.data}" class="h-12 w-12 object-contain rounded">
-                    </div>
-                `;
-            } else {
-                // بررسی اینکه فایل PDF است یا متنی معمولی برای آیکون
-                const isPdf = currentAttachment.name.toLowerCase().endsWith('.pdf');
-                const iconClass = isPdf ? 'fa-file-pdf text-red-500' : 'fa-file-alt text-gray-400';
-                const fileTypeLabel = isPdf ? 'PDF Document' : 'Text File';
-
-                contentHtml = `
-                    <div class="relative bg-[#353535] rounded-md py-1 px-3 flex flex-col justify-center max-w-[150px] min-w-[100px]">
-                        <button onclick="removeAttachment()" class="absolute -top-2 -right-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md transition z-10"><i class="fa fa-times"></i></button>
-                        <div class="flex items-center gap-2">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-xs text-white truncate" dir="ltr">${currentAttachment.name}</p>
-                                <p class="text-[10px] text-gray-400">${fileTypeLabel}</p>
-                            </div>
-                            <i class="fa ${iconClass} text-xl"></i>
+            currentAttachments.forEach((att, index) => {
+                if (att.type === 'image') {
+                    contentHtml += `
+                        <div class="relative group p-1 bg-white rounded flex-shrink-0 items-center justify-center inline-block">
+                            <button onclick="removeAttachment(${index})" class="absolute -top-2 -right-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md transition z-10"><i class="fa fa-times"></i></button>
+                            <img src="${att.data}" class="h-12 w-12 object-contain rounded">
                         </div>
-                    </div>
-                `;
-            }
+                    `;
+                } else {
+                    const isPdf = att.name.toLowerCase().endsWith('.pdf');
+                    const iconClass = isPdf ? 'fa-file-pdf text-red-500' : 'fa-file-alt text-gray-400';
+                    const fileTypeLabel = isPdf ? 'PDF Document' : 'Text File';
+
+                    contentHtml += `
+                        <div class="relative bg-[#353535] rounded-md py-1 px-3 flex-shrink-0 flex flex-col justify-center min-w-[100px] max-w-[150px] inline-block">
+                            <button onclick="removeAttachment(${index})" class="absolute -top-2 -right-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md transition z-10"><i class="fa fa-times"></i></button>
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs text-white truncate" dir="ltr" title="${att.name}">${att.name}</p>
+                                    <p class="text-[10px] text-gray-400">${fileTypeLabel}</p>
+                                </div>
+                                <i class="fa ${iconClass} text-xl"></i>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            contentHtml += '</div>';
             previewBox.innerHTML = contentHtml;
         }
 
-        function removeAttachment() {
-            currentAttachment = null;
+        function removeAttachment(index) {
+            currentAttachments.splice(index, 1);
             renderAttachmentPreview();
         }
 
-        // Core Functions
+        // ================= Core Functions =================
         function createNewChat() {
             if (isGenerating) return;
             const newChat = { id: Date.now().toString(), title: 'گفتگوی جدید', messages: [] };
@@ -376,13 +390,20 @@
                 let textToParse = '';
                 let imageHtml = '';
 
-                // بررسی ساختار محتوا (برای عکس آرایه است، برای بقیه رشته)
+                // اگر محتوا آرایه باشد (حالت چندگانه برای عکس و متن)
                 if (Array.isArray(rawContent)) {
                     const textObj = rawContent.find(c => c.type === 'text');
-                    const imgObj = rawContent.find(c => c.type === 'image_url');
+                    const imgObjs = rawContent.filter(c => c.type === 'image_url');
                     
                     if (textObj) textToParse = textObj.text;
-                    if (imgObj) imageHtml = `<img src="${imgObj.image_url.url}" class="max-w-xs md:max-w-sm rounded-lg shadow-md mb-3">`;
+                    
+                    if (imgObjs.length > 0) {
+                        imageHtml = '<div class="flex flex-wrap gap-2 mb-3">';
+                        imgObjs.forEach(img => {
+                            imageHtml += `<img src="${img.image_url.url}" class="max-w-xs max-h-64 object-cover rounded-lg shadow-md border border-gray-600">`;
+                        });
+                        imageHtml += '</div>';
+                    }
                 } else {
                     textToParse = rawContent;
                 }
@@ -439,7 +460,8 @@
                 chat.messages.forEach(m => {
                     if (Array.isArray(m.content)) {
                         const txt = m.content.find(c => c.type === 'text')?.text || '';
-                        totalChars += txt.length + 500; // 500 کاراکتر فرضی بابت وزن پردازش عکس
+                        const imgCount = m.content.filter(c => c.type === 'image_url').length;
+                        totalChars += txt.length + (imgCount * 500); // 500 کاراکتر فرضی بابت وزن پردازش هر عکس
                     } else {
                         totalChars += m.content.length;
                     }
@@ -493,12 +515,12 @@
                 const isUserMessage = chat.messages[editingMessageIndex].role === 'user';
                 const newTextContent = document.getElementById('edit-content').value;
                 
-                // اگر پیام اصلی آرایه (شامل عکس) بوده، آرایه را حفظ می‌کنیم
+                // حفظ آرایه عکس‌ها در صورت وجود داشتن عکس
                 if (Array.isArray(chat.messages[editingMessageIndex].content)) {
-                    const imgObj = chat.messages[editingMessageIndex].content.find(c => c.type === 'image_url');
+                    const imgObjs = chat.messages[editingMessageIndex].content.filter(c => c.type === 'image_url');
                     chat.messages[editingMessageIndex].content = [
                         { type: 'text', text: newTextContent },
-                        ...(imgObj ? [imgObj] : [])
+                        ...imgObjs
                     ];
                 } else {
                     chat.messages[editingMessageIndex].content = newTextContent;
@@ -554,31 +576,45 @@
             const input = document.getElementById('message-input');
             const text = input.value.trim();
             
-            if (!text && !currentAttachment) return; // اگر هم متن خالی بود هم فایلی نبود ارسال نشود
+            if (!text && currentAttachments.length === 0) return; 
 
             const chat = getCurrentChat();
             const timeStr = new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
             
-            let userContent = text;
+            let combinedText = text;
+            let imageObjects = [];
 
-            // ترکیب متن و پیوست
-            if (currentAttachment) {
-                if (currentAttachment.type === 'text') {
-                    userContent = `${text}\n\n--- محتوای فایل: ${currentAttachment.name} ---\n${currentAttachment.data}\n--- پایان فایل ---`;
-                } else if (currentAttachment.type === 'image') {
-                    userContent = [
-                        { type: "text", text: text || "این عکس را توصیف کن." },
-                        { type: "image_url", image_url: { url: currentAttachment.data } }
-                    ];
+            // ترکیب متن اصلی کاربر با تمام فایل‌های متنی و جمع‌آوری تمام عکس‌ها
+            currentAttachments.forEach(att => {
+                if (att.type === 'text') {
+                    combinedText += `\n\n--- محتوای فایل: ${att.name} ---\n${att.data}\n--- پایان فایل ---`;
+                } else if (att.type === 'image') {
+                    imageObjects.push({ type: "image_url", image_url: { url: att.data } });
                 }
+            });
+
+            let userContent;
+            // اگر تصویری پیوست شده باشد، باید از فرمت آرایه‌ای OpenAI استفاده کنیم
+            if (imageObjects.length > 0) {
+                userContent = [
+                    { type: "text", text: combinedText || "این تصاویر را بررسی کن." },
+                    ...imageObjects
+                ];
+            } else {
+                // اگر هیچ تصویری نیست، همه چیز فقط یک رشته متنی ساده است
+                userContent = combinedText;
             }
 
             chat.messages.push({ role: 'user', content: userContent, time: timeStr });
-            if (chat.title === 'گفتگوی جدید') chat.title = text ? text.substring(0, 30) + '...' : (currentAttachment ? 'ارسال فایل' : '...');
+            if (chat.title === 'گفتگوی جدید') chat.title = text ? text.substring(0, 30) + '...' : (currentAttachments.length > 0 ? 'ارسال چند فایل' : '...');
             
             input.value = '';
             input.style.height = 'auto';
-            removeAttachment(); // پاک کردن فایل بعد از ارسال
+            
+            // پاک کردن تمام پیوست‌ها بعد از ارسال
+            currentAttachments = [];
+            renderAttachmentPreview(); 
+            
             updateStats();
             renderChatList();
             renderMessages();
