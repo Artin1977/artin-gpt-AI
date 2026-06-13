@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artin gpt Web UI V1.6</title>
+    <title>Artin gpt Web UI V1.4</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -77,11 +77,7 @@
             <div class="max-w-4xl mx-auto relative flex items-center bg-[#252526] rounded-xl shadow-lg border border-gray-600 focus-within:border-gray-400 p-2">
                 <button id="mic-btn" onclick="toggleVoice()" class="p-2 text-gray-400 hover:text-white rounded-lg" title="تایپ صوتی"><i class="fa fa-microphone"></i></button>
                 <textarea id="message-input" rows="1" class="w-full bg-transparent text-white outline-none resize-none px-3 py-2 max-h-32" placeholder="پیام خود را بنویسید... (Shift+Enter برای خط جدید)" onkeydown="handleKeydown(event)"></textarea>
-                <!-- دکمه گیره کاغذ برای پیوست فایل -->
-                <button onclick="document.getElementById('file-upload').click()" class="p-2 text-gray-400 hover:text-white rounded-lg" title="پیوست فایل متنی/کد"><i class="fa fa-paperclip"></i></button>
-
-                <!-- اینپوت مخفی برای انتخاب فایل -->
-                <input type="file" id="file-upload" class="hidden" accept=".txt,.md,.js,.py,.html,.css,.json,.csv,.c,.cpp" onchange="handleFileUpload(event)">
+           
 
                 <button id="stop-btn" onclick="stopGeneration()" class="hidden p-2 text-red-500 hover:text-red-400 rounded-lg mx-1" title="توقف تولید"><i class="fa fa-stop-circle text-xl"></i></button>
                 <button id="send-btn" onclick="sendMessage()" class="p-2 text-gray-400 hover:bg-green-600 hover:text-white rounded-lg transition" title="ارسال"><i class="fa fa-paper-plane"></i></button>
@@ -561,51 +557,7 @@
                 alert('مرورگر شما از تایپ صوتی پشتیبانی نمی‌کند.');
                 return;
             }
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'fa-IR';
-            recognition.onresult = (event) => {
-                document.getElementById('message-input').value += event.results[0][0].transcript + ' ';
-                updateStats();
-            };
-            recognition.start();
-        }
-        // خواندن محتوای فایل‌های متنی و اضافه کردن به ورودی پیام
-function handleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
 
-    // بررسی سایز فایل (مثلا محدودیت 1 مگابایت برای جلوگیری از هنگ کردن)
-    if (file.size > 1024 * 1024) {
-        alert('حجم فایل بسیار زیاد است. لطفاً فایل کوچکتری انتخاب کنید.');
-        event.target.value = '';
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const content = e.target.result;
-        const input = document.getElementById('message-input');
-        
-        // اضافه کردن محتوای فایل به باکس متنی
-        const fileText = `\n\n--- محتوای فایل: ${file.name} ---\n${content}\n--- پایان فایل ---\n`;
-        input.value += fileText;
-        
-        // تنظیم مجدد ارتفاع باکس و آپدیت آمار توکن
-        input.style.height = 'auto';
-        input.style.height = (input.scrollHeight) + 'px';
-        updateStats();
-        
-        // ریست کردن اینپوت برای امکان انتخاب مجدد همان فایل
-        event.target.value = '';
-    };
-    
-    reader.onerror = function() {
-        alert('خطا در خواندن فایل!');
-    };
-
-    // خواندن فایل به صورت متن (UTF-8)
-    reader.readAsText(file);
-}
 
     </script>
 </body>
