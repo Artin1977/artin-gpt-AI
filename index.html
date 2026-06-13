@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artin gpt Web UI V1.5</title>
+    <title>Artin gpt Web UI V1.8</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -75,7 +75,12 @@
         <!-- Input Area -->
         <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#1e1e1e] via-[#1e1e1e] to-transparent p-4 z-20">
             <div class="max-w-4xl mx-auto relative flex items-center bg-[#252526] rounded-xl shadow-lg border border-gray-600 focus-within:border-gray-400 p-2">
-                <button id="mic-btn" onclick="toggleVoice()" class="p-2 text-gray-400 hover:text-white rounded-lg" title="تایپ صوتی"><i class="fa fa-microphone"></i></button>
+               <button id="mic-btn" onclick="toggleVoice()" class="p-2 text-gray-400 hover:text-white rounded-lg" title="تایپ صوتی"><i class="fa fa-microphone"></i></button>
+
+                <!-- دکمه سنجاق برای آپلود فایل -->
+                <button onclick="document.getElementById('file-upload').click()" class="p-2 text-gray-400 hover:text-white rounded-lg mx-1" title="پیوست فایل"><i class="fa fa-paperclip"></i></button>
+                <input type="file" id="file-upload" class="hidden" accept="*/*" onchange="handleFileUpload(event)">
+
                 <textarea id="message-input" rows="1" class="w-full bg-transparent text-white outline-none resize-none px-3 py-2 max-h-32" placeholder="پیام خود را بنویسید... (Shift+Enter برای خط جدید)" onkeydown="handleKeydown(event)"></textarea>
                 
                 <button id="stop-btn" onclick="stopGeneration()" class="hidden p-2 text-red-500 hover:text-red-400 rounded-lg mx-1" title="توقف تولید"><i class="fa fa-stop-circle text-xl"></i></button>
@@ -564,6 +569,38 @@
             };
             recognition.start();
         }
+        // خواندن محتوای فایل
+function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) { // محدودیت ۲ مگابایت
+        alert('حجم فایل نباید بیشتر از ۲ مگابایت باشد.');
+        event.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    
+    // اگر فایل متنی یا کد است
+    if (file.type.startsWith('text/') || file.name.match(/\.(js|py|html|css|json|md|csv|txt)$/i)) {
+        reader.onload = function(e) {
+            const input = document.getElementById('message-input');
+            input.value += `\n\n--- فایل: ${file.name} ---\n${e.target.result}\n--- پایان فایل ---\n`;
+            input.style.height = 'auto';
+            input.style.height = (input.scrollHeight) + 'px';
+            updateStats();
+        };
+        reader.readAsText(file);
+    } else {
+        // برای فایل‌های غیر متنی (مثل PDF و عکس) در این نسخه فقط نام آن درج می‌شود
+        // پردازش واقعی عکس و PDF نیازمند مدل Vision و کتابخانه‌های تبدیل است
+        alert('در حال حاضر فقط خواندن محتوای فایل‌های متنی و کد پشتیبانی می‌شود. برای عکس و PDF باید از مدل‌های Vision استفاده کنید.');
+    }
+    
+    event.target.value = ''; // ریست کردن اینپوت
+}
+
     </script>
 </body>
 </html>
