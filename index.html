@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artin gpt Web UI V1.8</title>
+    <title>Artin gpt Web UI V1.7</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -68,24 +68,37 @@
         </div>
 
         <!-- Messages -->
-        <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-6 pb-32 scroll-smooth">
+        <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-6 pb-40 scroll-smooth">
             <!-- پیام‌ها اینجا قرار می‌گیرند -->
         </div>
 
         <!-- Input Area -->
         <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#1e1e1e] via-[#1e1e1e] to-transparent p-4 z-20">
-            <div class="max-w-4xl mx-auto relative flex items-center bg-[#252526] rounded-xl shadow-lg border border-gray-600 focus-within:border-gray-400 p-2">
-               <button id="mic-btn" onclick="toggleVoice()" class="p-2 text-gray-400 hover:text-white rounded-lg" title="تایپ صوتی"><i class="fa fa-microphone"></i></button>
-
-                <!-- دکمه سنجاق برای آپلود فایل -->
-                <button onclick="document.getElementById('file-upload').click()" class="p-2 text-gray-400 hover:text-white rounded-lg mx-1" title="پیوست فایل"><i class="fa fa-paperclip"></i></button>
-                <input type="file" id="file-upload" class="hidden" accept="*/*" onchange="handleFileUpload(event)">
-
-                <textarea id="message-input" rows="1" class="w-full bg-transparent text-white outline-none resize-none px-3 py-2 max-h-32" placeholder="پیام خود را بنویسید... (Shift+Enter برای خط جدید)" onkeydown="handleKeydown(event)"></textarea>
+            <div class="max-w-4xl mx-auto relative">
                 
-                <button id="stop-btn" onclick="stopGeneration()" class="hidden p-2 text-red-500 hover:text-red-400 rounded-lg mx-1" title="توقف تولید"><i class="fa fa-stop-circle text-xl"></i></button>
-                <button id="send-btn" onclick="sendMessage()" class="p-2 text-gray-400 hover:bg-green-600 hover:text-white rounded-lg transition" title="ارسال"><i class="fa fa-paper-plane"></i></button>
+                <!-- Attachment Preview -->
+                <div id="attachment-preview" class="hidden absolute bottom-[calc(100%+0.5rem)] right-0 bg-[#252526] p-2 rounded-lg border border-gray-600 shadow-lg mb-2">
+                    <!-- محتوای پیوست با جاوااسکریپت تزریق می‌شود -->
+                </div>
+
+                <div class="flex items-center bg-[#252526] rounded-xl shadow-lg border border-gray-600 focus-within:border-gray-400 p-2">
+                    
+                    <!-- File Input Hidden -->
+                    <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)">
+                    
+                    <button onclick="document.getElementById('file-input').click()" class="p-2 text-gray-400 hover:text-white rounded-lg transition-colors" title="پیوست فایل (عکس، متن، کد)">
+                        <i class="fa fa-paperclip"></i>
+                    </button>
+                    
+                    <button id="mic-btn" onclick="toggleVoice()" class="p-2 text-gray-400 hover:text-white rounded-lg" title="تایپ صوتی"><i class="fa fa-microphone"></i></button>
+                    
+                    <textarea id="message-input" rows="1" class="w-full bg-transparent text-white outline-none resize-none px-3 py-2 max-h-32" placeholder="پیام خود را بنویسید... (Shift+Enter برای خط جدید)" onkeydown="handleKeydown(event)"></textarea>
+                    
+                    <button id="stop-btn" onclick="stopGeneration()" class="hidden p-2 text-red-500 hover:text-red-400 rounded-lg mx-1" title="توقف تولید"><i class="fa fa-stop-circle text-xl"></i></button>
+                    <button id="send-btn" onclick="sendMessage()" class="p-2 text-gray-400 hover:bg-green-600 hover:text-white rounded-lg transition" title="ارسال"><i class="fa fa-paper-plane"></i></button>
+                </div>
             </div>
+            
             <!-- مانیتورینگ توکن -->
             <div class="max-w-4xl mx-auto text-center text-xs text-gray-500 mt-2 flex justify-between items-center px-2" id="stats-bar">
                 <span id="word-count">تعداد کلمات: 0</span>
@@ -148,6 +161,9 @@
         let isGenerating = false;
         let editingMessageIndex = -1;
 
+        // متغیرهای پیوست فایل
+        let currentAttachment = null; // { type: 'image' | 'text', data: string, name: string }
+
         // Init
         document.addEventListener('DOMContentLoaded', () => {
             if (chats.length === 0) createNewChat();
@@ -160,6 +176,78 @@
             document.getElementById('message-input').addEventListener('input', updateStats);
             updateThinkButtonState();
         });
+
+        // ================= فایل‌ها و پیوست =================
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert('حجم فایل نباید بیشتر از ۵ مگابایت باشد.');
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            
+            if (file.type.startsWith('image/')) {
+                reader.onload = function(e) {
+                    currentAttachment = { type: 'image', data: e.target.result, name: file.name };
+                    renderAttachmentPreview();
+                };
+                reader.readAsDataURL(file);
+            } 
+            else if (file.type.startsWith('text/') || file.name.match(/\.(js|py|html|css|json|md|csv|txt|sh|cpp|c|java|xml)$/i)) {
+                reader.onload = function(e) {
+                    currentAttachment = { type: 'text', data: e.target.result, name: file.name };
+                    renderAttachmentPreview();
+                };
+                reader.readAsText(file);
+            } else {
+                alert('این فرمت فایل پشتیبانی نمی‌شود.');
+            }
+            
+            event.target.value = ''; 
+        }
+
+        function renderAttachmentPreview() {
+            const previewBox = document.getElementById('attachment-preview');
+            if (!currentAttachment) {
+                previewBox.classList.add('hidden');
+                return;
+            }
+            
+            previewBox.classList.remove('hidden');
+            let contentHtml = '';
+            
+            if (currentAttachment.type === 'image') {
+                contentHtml = `
+                    <div class="relative group p-1 bg-white rounded flex items-center justify-center">
+                        <button onclick="removeAttachment()" class="absolute -top-2 -right-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md transition z-10"><i class="fa fa-times"></i></button>
+                        <img src="${currentAttachment.data}" class="h-12 w-12 object-contain rounded">
+                    </div>
+                `;
+            } else {
+                contentHtml = `
+                    <div class="relative bg-[#353535] rounded-md py-1 px-3 flex flex-col justify-center max-w-[150px] min-w-[100px]">
+                        <button onclick="removeAttachment()" class="absolute -top-2 -right-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md transition z-10"><i class="fa fa-times"></i></button>
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs text-white truncate" dir="ltr">${currentAttachment.name}</p>
+                                <p class="text-[10px] text-gray-400">Text</p>
+                            </div>
+                            <i class="fa fa-file-alt text-gray-400 text-xl"></i>
+                        </div>
+                    </div>
+                `;
+            }
+            previewBox.innerHTML = contentHtml;
+        }
+
+        function removeAttachment() {
+            currentAttachment = null;
+            renderAttachmentPreview();
+        }
 
         // Core Functions
         function createNewChat() {
@@ -192,7 +280,7 @@
             updateStats();
         }
 
-        // Sidebar Edit/Delete Actions
+        // Sidebar Actions
         function editChatTitle(id) {
             if (isGenerating) return;
             const chat = chats.find(c => c.id === id);
@@ -248,19 +336,34 @@
             }
 
             container.innerHTML = chat.messages.map((msg, index) => {
-                let content = msg.content;
+                let rawContent = msg.content;
+                let textToParse = '';
+                let imageHtml = '';
+
+                // بررسی ساختار محتوا (برای عکس آرایه است، برای بقیه رشته)
+                if (Array.isArray(rawContent)) {
+                    const textObj = rawContent.find(c => c.type === 'text');
+                    const imgObj = rawContent.find(c => c.type === 'image_url');
+                    
+                    if (textObj) textToParse = textObj.text;
+                    if (imgObj) imageHtml = `<img src="${imgObj.image_url.url}" class="max-w-xs md:max-w-sm rounded-lg shadow-md mb-3">`;
+                } else {
+                    textToParse = rawContent;
+                }
+
                 // پردازش تگ Think
                 if (settings.showThink) {
-                    content = content.replace(/<think>([\s\S]*?)<\/think>/g, '<div class="think-box"><strong>تفکر:</strong><br>$1</div>');
+                    textToParse = textToParse.replace(/<think>([\s\S]*?)<\/think>/g, '<div class="think-box"><strong>تفکر:</strong><br>$1</div>');
                 } else {
-                    content = content.replace(/<think>([\s\S]*?)<\/think>/g, '');
+                    textToParse = textToParse.replace(/<think>([\s\S]*?)<\/think>/g, '');
                 }
                 
-                const htmlContent = marked.parse(content);
+                const htmlContent = marked.parse(textToParse);
+                const finalContent = imageHtml + htmlContent;
 
                 return `
                 <div class="flex flex-col ${msg.role === 'user' ? 'items-start message-user' : 'items-start message-bot'} p-4 rounded-lg w-full relative group border border-transparent hover:border-gray-700 transition-colors">
-                    <div class="font-bold mb-1 text-sm text-gray-400 flex items-center w-full">
+                    <div class="font-bold mb-2 text-sm text-gray-400 flex items-center w-full">
                         <i class="fa ${msg.role === 'user' ? 'fa-user text-blue-500' : 'fa-robot text-green-500'} ml-2"></i>
                         ${msg.role === 'user' ? settings.username : 'دستیار هوش مصنوعی'}
                         <div class="mr-auto flex items-center gap-3">
@@ -269,7 +372,7 @@
                             <span class="text-xs text-gray-600 font-normal">${msg.time || ''}</span>
                         </div>
                     </div>
-                    <div class="markdown-body w-full overflow-hidden text-sm leading-relaxed">${htmlContent}</div>
+                    <div class="markdown-body w-full overflow-hidden text-sm leading-relaxed">${finalContent}</div>
                 </div>`;
             }).join('');
             
@@ -278,8 +381,8 @@
                 delimiters: [
                     {left: '$$', right: '$$', display: true},
                     {left: '$', right: '$', display: false},
-                    {left: '\\(', right: '\\)', display: false},
-                    {left: '\\[', right: '\\]', display: true}
+                    {left: '\\\(', right: '\\\)', display: false},
+                    {left: '\\\[', right: '\\\]', display: true}
                 ],
                 throwOnError: false
             });
@@ -293,11 +396,18 @@
             const count = textInput ? textInput.split(/\s+/).length : 0;
             document.getElementById('word-count').innerText = `تعداد کلمات: ${count}`;
 
-            // محاسبه توکن (تقریبی: هر 3.5 کاراکتر یک توکن)
             const chat = getCurrentChat();
             let totalChars = settings.systemPrompt.length + textInput.length;
+            
             if (chat) {
-                chat.messages.forEach(m => totalChars += m.content.length);
+                chat.messages.forEach(m => {
+                    if (Array.isArray(m.content)) {
+                        const txt = m.content.find(c => c.type === 'text')?.text || '';
+                        totalChars += txt.length + 500; // 500 کاراکتر فرضی بابت وزن پردازش عکس
+                    } else {
+                        totalChars += m.content.length;
+                    }
+                });
             }
             const usedTokens = Math.ceil(totalChars / 3.5);
             let percent = ((usedTokens / MAX_TOKENS) * 100).toFixed(1);
@@ -306,7 +416,6 @@
             const tokenElement = document.getElementById('token-count');
             tokenElement.innerHTML = `مصرف توکن: ${usedTokens} / ${MAX_TOKENS} (<span dir="ltr">${percent}%</span>)`;
             
-            // در صورتی که بیش از ۹۰ درصد مصرف شده بود قرمز شود
             if (percent > 90) tokenElement.classList.add('text-red-400');
             else tokenElement.classList.remove('text-red-400');
         }
@@ -327,7 +436,13 @@
             if (isGenerating) return;
             editingMessageIndex = index;
             const chat = getCurrentChat();
-            document.getElementById('edit-content').value = chat.messages[index].content;
+            
+            let txtContent = chat.messages[index].content;
+            if (Array.isArray(txtContent)) {
+                txtContent = txtContent.find(c => c.type === 'text')?.text || '';
+            }
+            
+            document.getElementById('edit-content').value = txtContent;
             document.getElementById('edit-modal').classList.remove('hidden');
         }
 
@@ -340,12 +455,20 @@
             if (editingMessageIndex > -1) {
                 const chat = getCurrentChat();
                 const isUserMessage = chat.messages[editingMessageIndex].role === 'user';
-                const newContent = document.getElementById('edit-content').value;
+                const newTextContent = document.getElementById('edit-content').value;
                 
-                chat.messages[editingMessageIndex].content = newContent;
+                // اگر پیام اصلی آرایه (شامل عکس) بوده، آرایه را حفظ می‌کنیم
+                if (Array.isArray(chat.messages[editingMessageIndex].content)) {
+                    const imgObj = chat.messages[editingMessageIndex].content.find(c => c.type === 'image_url');
+                    chat.messages[editingMessageIndex].content = [
+                        { type: 'text', text: newTextContent },
+                        ...(imgObj ? [imgObj] : [])
+                    ];
+                } else {
+                    chat.messages[editingMessageIndex].content = newTextContent;
+                }
                 
                 if (isUserMessage) {
-                    // حذف پیام‌های بعدی و تولید مجدد
                     chat.messages = chat.messages.slice(0, editingMessageIndex + 1);
                     saveData();
                     renderMessages();
@@ -369,7 +492,6 @@
             }
         }
 
-        // Toggle Quick Think
         function toggleQuickThink() {
             settings.showThink = !settings.showThink;
             saveData();
@@ -395,16 +517,32 @@
             if (isGenerating) return;
             const input = document.getElementById('message-input');
             const text = input.value.trim();
-            if (!text) return;
+            
+            if (!text && !currentAttachment) return; // اگر هم متن خالی بود هم فایلی نبود ارسال نشود
 
             const chat = getCurrentChat();
             const timeStr = new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
             
-            chat.messages.push({ role: 'user', content: text, time: timeStr });
-            if (chat.title === 'گفتگوی جدید') chat.title = text.substring(0, 30) + '...';
+            let userContent = text;
+
+            // ترکیب متن و پیوست
+            if (currentAttachment) {
+                if (currentAttachment.type === 'text') {
+                    userContent = `${text}\n\n--- فایل: ${currentAttachment.name} ---\n${currentAttachment.data}\n--- پایان فایل ---`;
+                } else if (currentAttachment.type === 'image') {
+                    userContent = [
+                        { type: "text", text: text || "این عکس را توصیف کن." },
+                        { type: "image_url", image_url: { url: currentAttachment.data } }
+                    ];
+                }
+            }
+
+            chat.messages.push({ role: 'user', content: userContent, time: timeStr });
+            if (chat.title === 'گفتگوی جدید') chat.title = text ? text.substring(0, 30) + '...' : (currentAttachment ? 'ارسال فایل' : '...');
             
             input.value = '';
             input.style.height = 'auto';
+            removeAttachment(); // پاک کردن فایل بعد از ارسال
             updateStats();
             renderChatList();
             renderMessages();
@@ -452,7 +590,7 @@
                     signal: abortController.signal
                 });
 
-                if (!response.ok) throw new Error('خطا در ارتباط با سرور LM Studio (آیا سرور داخلی را استارت کرده‌اید؟)');
+                if (!response.ok) throw new Error('خطا در ارتباط با سرور LM Studio (آیا سرور داخلی را استارت کرده‌اید؟ مدل‌های بینایی ماشین برای عکس الزامی است)');
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder("utf-8");
@@ -515,7 +653,11 @@
             if (!chat) return;
             let text = `${chat.title}\n\n`;
             chat.messages.forEach(m => {
-                text += `[${m.role === 'user' ? settings.username : 'AI'}] - ${m.time}\n${m.content}\n\n-----------------\n\n`;
+                let contentText = m.content;
+                if (Array.isArray(contentText)) {
+                    contentText = contentText.find(c => c.type === 'text')?.text || '[محتوای تصویری]';
+                }
+                text += `[${m.role === 'user' ? settings.username : 'AI'}] - ${m.time}\n${contentText}\n\n-----------------\n\n`;
             });
             const blob = new Blob([text], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
@@ -569,38 +711,6 @@
             };
             recognition.start();
         }
-        // خواندن محتوای فایل
-function handleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) { // محدودیت ۲ مگابایت
-        alert('حجم فایل نباید بیشتر از ۲ مگابایت باشد.');
-        event.target.value = '';
-        return;
-    }
-
-    const reader = new FileReader();
-    
-    // اگر فایل متنی یا کد است
-    if (file.type.startsWith('text/') || file.name.match(/\.(js|py|html|css|json|md|csv|txt)$/i)) {
-        reader.onload = function(e) {
-            const input = document.getElementById('message-input');
-            input.value += `\n\n--- فایل: ${file.name} ---\n${e.target.result}\n--- پایان فایل ---\n`;
-            input.style.height = 'auto';
-            input.style.height = (input.scrollHeight) + 'px';
-            updateStats();
-        };
-        reader.readAsText(file);
-    } else {
-        // برای فایل‌های غیر متنی (مثل PDF و عکس) در این نسخه فقط نام آن درج می‌شود
-        // پردازش واقعی عکس و PDF نیازمند مدل Vision و کتابخانه‌های تبدیل است
-        alert('در حال حاضر فقط خواندن محتوای فایل‌های متنی و کد پشتیبانی می‌شود. برای عکس و PDF باید از مدل‌های Vision استفاده کنید.');
-    }
-    
-    event.target.value = ''; // ریست کردن اینپوت
-}
-
     </script>
 </body>
 </html>
