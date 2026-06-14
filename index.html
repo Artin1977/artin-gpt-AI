@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Artin gpt Web UI V1.9 (Responsive)</title>
+    <title>Artin gpt Web UI V2.3(Responsive)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -83,12 +83,12 @@
         </div>
 
         <!-- Messages -->
-        <div id="chat-container" class="flex-1 overflow-y-auto p-2 md:p-4 space-y-6 pb-40 scroll-smooth">
+        <div id="chat-container" class="flex-1 overflow-y-auto p-2 md:p-4 scroll-smooth">
             <!-- پیام‌ها اینجا قرار می‌گیرند -->
         </div>
 
-        <!-- Input Area -->
-        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#1e1e1e] via-[#1e1e1e] to-transparent p-2 md:p-4 z-20">
+        <!-- Input Area (اصلاح شده: بدون absolute، با flex-shrink-0) -->
+        <div class="w-full flex-shrink-0 bg-[#1e1e1e] p-2 md:p-4 z-20 border-t border-gray-700 md:border-none">
             <div class="max-w-4xl mx-auto relative">
                 
                 <!-- Attachment Preview -->
@@ -165,7 +165,6 @@
     </div>
 
     <script>
-        // --- توابع رابط کاربری موبایل ---
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -173,7 +172,6 @@
             overlay.classList.toggle('hidden');
         }
 
-        // تغییر تابع switchChat تا در موبایل پس از انتخاب منو را ببندد
         const originalSwitchChat = switchChat;
         function switchChat(id) {
             originalSwitchChat(id);
@@ -181,10 +179,6 @@
                 toggleSidebar();
             }
         }
-        // ---------------------------------
-
-        // بقیه کدهای جاوااسکریپت کاملا مشابه نسخه قبلی شما است و نیازی به تغییر ندارد...
-        // ...
         
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -217,9 +211,6 @@
             updateThinkButtonState();
         });
 
-        // ================= سایر توابع کپی شده از کد اصلی =================
-        // [توابع handleFileUpload, processFile, renderAttachmentPreview, removeAttachment, ...]
-        
         async function handleFileUpload(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
@@ -337,15 +328,6 @@
             return chats.find(c => c.id === currentChatId);
         }
 
-        function switchChat(id) {
-            if (isGenerating) return;
-            currentChatId = id;
-            saveData();
-            renderChatList();
-            renderMessages();
-            updateStats();
-        }
-
         function editChatTitle(id) {
             if (isGenerating) return;
             const chat = chats.find(c => c.id === id);
@@ -388,6 +370,7 @@
             document.getElementById('chat-title').innerText = getCurrentChat()?.title || 'Artin GPT';
         }
 
+        // تابع renderMessages آپدیت شده (اصلاح کانتینر پیام‌ها)
         function renderMessages() {
             const container = document.getElementById('chat-container');
             const chat = getCurrentChat();
@@ -399,7 +382,7 @@
                 return;
             }
 
-            container.innerHTML = chat.messages.map((msg, index) => {
+            const messagesHtml = chat.messages.map((msg, index) => {
                 let rawContent = msg.content;
                 let textToParse = '';
                 let imageHtml = '';
@@ -442,6 +425,8 @@
                     <div class="markdown-body w-full overflow-hidden text-[13px] md:text-sm leading-relaxed">${finalContent}</div>
                 </div>`;
             }).join('');
+            
+            container.innerHTML = `<div class="max-w-4xl mx-auto space-y-6 pb-4">${messagesHtml}</div>`;
             
             renderMathInElement(container, {
                 delimiters: [
