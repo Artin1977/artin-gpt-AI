@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Artin gpt Web UI V1.8 (Multi-File, Vision & PDF)</title>
+    <title>Artin gpt Web UI V1.8 (Responsive)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -28,7 +28,7 @@
         .markdown-body code { font-family: monospace; color: #10b981; }
         .think-box { border-left: 4px solid #6b7280; background-color: #262626; padding: 0.5rem 1rem; margin: 0.5rem 0; border-radius: 0.25rem; font-style: italic; color: #9ca3af; }
         /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #565869; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #acacbe; }
@@ -38,16 +38,16 @@
         .katex { direction: ltr; }
     </style>
 </head>
-<body class="h-[100dvh] flex overflow-hidden relative">
+<body class="h-screen flex overflow-hidden">
 
-    <!-- Mobile Overlay -->
-    <div id="mobile-overlay" class="hidden fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm" onclick="toggleSidebar()"></div>
+    <!-- Mobile Overlay for Sidebar -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden transition-opacity"></div>
 
     <!-- Sidebar -->
-    <div id="sidebar" class="sidebar fixed right-0 top-0 h-[100dvh] z-40 w-64 transform translate-x-full md:translate-x-0 md:relative flex-shrink-0 flex flex-col p-2 transition-transform duration-300 border-l border-gray-700 md:border-none">
-        <div class="flex justify-between items-center mb-4 md:hidden px-2 pt-2 text-gray-400">
+    <div id="sidebar" class="sidebar fixed right-0 top-0 bottom-0 z-40 w-64 transform translate-x-full md:relative md:translate-x-0 transition-transform duration-300 flex-shrink-0 flex flex-col p-2 shadow-2xl md:shadow-none border-l border-gray-700 md:border-none">
+        <div class="flex items-center justify-between mb-4 md:hidden px-2 pt-2 text-gray-300">
             <span class="font-bold">منوی گفتگوها</span>
-            <button onclick="toggleSidebar()" class="hover:text-white"><i class="fa fa-times text-xl"></i></button>
+            <button onclick="toggleSidebar()" class="text-xl p-1"><i class="fa fa-times"></i></button>
         </div>
         <button onclick="createNewChat(); if(window.innerWidth < 768) toggleSidebar();" class="flex items-center justify-center gap-2 p-3 border border-gray-600 rounded-md hover:bg-gray-700 transition w-full mb-4 text-sm font-semibold">
             <i class="fa fa-plus"></i> گفتگوی جدید
@@ -56,66 +56,70 @@
             <!-- لیست چت‌ها اینجا قرار می‌گیرد -->
         </div>
         <div class="mt-auto border-t border-gray-600 pt-2 space-y-2">
-            <button onclick="toggleSettings(); if(window.innerWidth < 768) toggleSidebar();" class="flex items-center gap-2 p-3 rounded-md hover:bg-gray-700 w-full text-right text-sm">
+            <button onclick="toggleSettings()" class="flex items-center gap-2 p-3 rounded-md hover:bg-gray-700 w-full text-right text-sm">
                 <i class="fa fa-cog"></i> تنظیمات کاربر
             </button>
         </div>
     </div>
 
     <!-- Main Chat Area -->
-    <div class="flex-1 flex flex-col w-full h-[100dvh]">
+    <div class="flex-1 flex flex-col relative w-full overflow-hidden">
         <!-- Header -->
-        <div class="h-14 border-b border-gray-600 flex items-center justify-between px-4 bg-[#1e1e1e] shadow-sm flex-none z-10">
+        <div class="h-14 border-b border-gray-600 flex items-center justify-between px-3 md:px-4 bg-[#1e1e1e] shadow-sm z-10">
             <div class="flex items-center gap-3 overflow-hidden">
-                <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white transition">
-                    <i class="fa fa-bars text-lg"></i>
+                <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white p-2 rounded-lg">
+                    <i class="fa fa-bars text-xl"></i>
                 </button>
-                <h1 id="chat-title" class="font-semibold truncate text-gray-200">گفتگوی جدید</h1>
+                <h1 id="chat-title" class="font-semibold truncate text-gray-200 text-sm md:text-base max-w-[150px] md:max-w-xs">گفتگوی جدید</h1>
             </div>
-            <div class="flex gap-3 md:gap-4 items-center text-gray-400">
-                <button id="quick-think-btn" onclick="toggleQuickThink()" title="روشن/خاموش کردن تفکر (Thinking)" class="flex items-center gap-2 px-2 py-1 rounded transition-colors hover:bg-gray-700">
-                    <i class="fa fa-brain"></i> <span class="text-xs font-semibold hidden sm:inline" id="think-status-text">تفکر روشن</span>
+            <div class="flex gap-2 md:gap-4 items-center text-gray-400">
+                <button id="quick-think-btn" onclick="toggleQuickThink()" title="روشن/خاموش کردن تفکر" class="flex items-center gap-1 md:gap-2 px-2 py-1 rounded transition-colors hover:bg-gray-700">
+                    <i class="fa fa-brain"></i> <span class="hidden md:inline text-xs font-semibold" id="think-status-text">تفکر روشن</span>
                 </button>
                 <div class="w-px h-6 bg-gray-600"></div>
-                <button onclick="exportChat()" title="خروجی TXT"><i class="fa fa-download hover:text-white"></i></button>
-                <button onclick="clearChats()" title="حذف همه داده‌ها"><i class="fa fa-trash hover:text-red-500"></i></button>
+                <button onclick="exportChat()" title="خروجی TXT" class="p-1.5"><i class="fa fa-download hover:text-white"></i></button>
+                <button onclick="clearChats()" title="حذف همه داده‌ها" class="p-1.5"><i class="fa fa-trash hover:text-red-500"></i></button>
             </div>
         </div>
 
         <!-- Messages -->
-        <div id="chat-container" class="flex-1 overflow-y-auto p-2 md:p-4 space-y-6 scroll-smooth w-full">
+        <div id="chat-container" class="flex-1 overflow-y-auto p-2 md:p-4 space-y-6 pb-40 scroll-smooth">
             <!-- پیام‌ها اینجا قرار می‌گیرند -->
         </div>
 
-        <!-- Input Area (Fixed relative to layout, not absolute) -->
-        <div class="flex-none bg-[#1e1e1e] p-2 md:p-4 z-20 w-full border-t border-gray-700 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.3)]">
+        <!-- Input Area -->
+        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#1e1e1e] via-[#1e1e1e] to-transparent p-2 md:p-4 z-20">
             <div class="max-w-4xl mx-auto relative">
                 
-                <!-- Attachment Preview (Multi-file) -->
-                <div id="attachment-preview" class="hidden absolute bottom-[calc(100%+0.5rem)] right-0 bg-[#252526] p-2 rounded-lg border border-gray-600 shadow-lg mb-2 max-w-full overflow-x-auto whitespace-nowrap">
+                <!-- Attachment Preview -->
+                <div id="attachment-preview" class="hidden absolute bottom-[calc(100%+0.5rem)] right-0 left-0 md:left-auto bg-[#252526] p-2 rounded-lg border border-gray-600 shadow-lg mb-2 max-w-full overflow-x-auto">
                     <!-- محتوای پیوست با جاوااسکریپت تزریق می‌شود -->
                 </div>
 
-                <div class="flex items-end bg-[#252526] rounded-xl shadow-inner border border-gray-600 focus-within:border-gray-400 p-2">
+                <div class="flex items-end md:items-center bg-[#252526] rounded-xl shadow-lg border border-gray-600 focus-within:border-gray-400 p-1.5 md:p-2">
                     
-                    <!-- File Input Hidden -->
                     <input type="file" id="file-input" class="hidden" multiple accept="image/*,.txt,.py,.js,.html,.css,.json,.md,.csv,.pdf" onchange="handleFileUpload(event)">
                     
-                    <button onclick="document.getElementById('file-input').click()" class="p-2 mb-1 text-gray-400 hover:text-white rounded-lg transition-colors flex-none" title="پیوست فایل (عکس، PDF، متن، کد)">
-                        <i class="fa fa-paperclip"></i>
-                    </button>
+                    <div class="flex gap-1 mb-1 md:mb-0">
+                        <button onclick="document.getElementById('file-input').click()" class="p-2 text-gray-400 hover:text-white rounded-lg transition-colors" title="پیوست فایل">
+                            <i class="fa fa-paperclip"></i>
+                        </button>
+                        <button id="mic-btn" onclick="toggleVoice()" class="p-2 text-gray-400 hover:text-white rounded-lg hidden md:block" title="تایپ صوتی">
+                            <i class="fa fa-microphone"></i>
+                        </button>
+                    </div>
                     
-                    <button id="mic-btn" onclick="toggleVoice()" class="p-2 mb-1 text-gray-400 hover:text-white rounded-lg flex-none" title="تایپ صوتی"><i class="fa fa-microphone"></i></button>
+                    <textarea id="message-input" rows="1" class="w-full bg-transparent text-white outline-none resize-none px-2 py-2.5 md:px-3 md:py-2 max-h-32 text-sm md:text-base self-center" placeholder="پیام خود را بنویسید..." onkeydown="handleKeydown(event)"></textarea>
                     
-                    <textarea id="message-input" rows="1" class="w-full bg-transparent text-white outline-none resize-none px-3 py-3 max-h-32" placeholder="پیام خود را بنویسید... (Shift+Enter خط جدید)" onkeydown="handleKeydown(event)"></textarea>
-                    
-                    <button id="stop-btn" onclick="stopGeneration()" class="hidden p-2 mb-1 text-red-500 hover:text-red-400 rounded-lg mx-1 flex-none" title="توقف تولید"><i class="fa fa-stop-circle text-xl"></i></button>
-                    <button id="send-btn" onclick="sendMessage()" class="p-2 mb-1 text-gray-400 hover:bg-green-600 hover:text-white rounded-lg transition flex-none" title="ارسال"><i class="fa fa-paper-plane"></i></button>
+                    <div class="flex mb-1 md:mb-0">
+                        <button id="stop-btn" onclick="stopGeneration()" class="hidden p-2 text-red-500 hover:text-red-400 rounded-lg mx-1 text-xl" title="توقف تولید"><i class="fa fa-stop-circle"></i></button>
+                        <button id="send-btn" onclick="sendMessage()" class="p-2 text-gray-400 hover:bg-green-600 hover:text-white rounded-lg transition text-lg md:text-base" title="ارسال"><i class="fa fa-paper-plane"></i></button>
+                    </div>
                 </div>
             </div>
             
             <!-- مانیتورینگ توکن -->
-            <div class="max-w-4xl mx-auto text-center text-[10px] sm:text-xs text-gray-500 mt-2 flex justify-between items-center px-2" id="stats-bar">
+            <div class="max-w-4xl mx-auto text-center text-[10px] md:text-xs text-gray-500 mt-2 flex justify-between items-center px-2" id="stats-bar">
                 <span id="word-count">تعداد کلمات: 0</span>
                 <span id="token-count" class="font-mono transition-colors">مصرف توکن: 0 / 36671 (0.0%)</span>
             </div>
@@ -124,16 +128,16 @@
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center backdrop-blur-sm p-4">
-        <div class="bg-[#121212] w-full max-w-md p-6 rounded-lg shadow-xl border border-gray-700">
-            <h2 class="text-xl mb-4 font-bold border-b border-gray-600 pb-2"><i class="fa fa-sliders"></i> تنظیمات سیستم</h2>
+        <div class="bg-[#121212] w-full max-w-md p-5 md:p-6 rounded-lg shadow-xl border border-gray-700">
+            <h2 class="text-lg md:text-xl mb-4 font-bold border-b border-gray-600 pb-2"><i class="fa fa-sliders"></i> تنظیمات سیستم</h2>
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm mb-1 text-gray-300">نام کاربری شما:</label>
-                    <input type="text" id="set-username" class="w-full bg-[#1e1e1e] text-white rounded p-2 outline-none border border-gray-600 focus:border-blue-500 transition">
+                    <input type="text" id="set-username" class="w-full bg-[#1e1e1e] text-white rounded p-2 outline-none border border-gray-600 focus:border-blue-500 transition text-sm">
                 </div>
                 <div>
                     <label class="block text-sm mb-1 text-gray-300">دستورالعمل پایه (System Prompt):</label>
-                    <textarea id="set-system" class="w-full bg-[#1e1e1e] text-white rounded p-2 outline-none border border-gray-600 h-24 focus:border-blue-500 transition resize-none"></textarea>
+                    <textarea id="set-system" class="w-full bg-[#1e1e1e] text-white rounded p-2 outline-none border border-gray-600 h-24 focus:border-blue-500 transition resize-none text-sm"></textarea>
                 </div>
                 <div class="flex items-center justify-between bg-[#1e1e1e] p-3 rounded border border-gray-600">
                     <label class="text-sm text-gray-300">استفاده از قابلیت استدلال (Think)</label>
@@ -141,27 +145,47 @@
                 </div>
             </div>
             <div class="mt-6 flex justify-end gap-2">
-                <button onclick="toggleSettings()" class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">انصراف</button>
-                <button onclick="saveSettings()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 transition">ذخیره تنظیمات</button>
+                <button onclick="toggleSettings()" class="px-4 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 transition">انصراف</button>
+                <button onclick="saveSettings()" class="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-500 transition">ذخیره تنظیمات</button>
             </div>
         </div>
     </div>
 
     <!-- Edit Message Modal -->
     <div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center backdrop-blur-sm p-4">
-        <div class="bg-[#121212] w-full max-w-lg p-6 rounded-lg shadow-xl border border-gray-700">
-            <h2 class="text-xl mb-4 font-bold border-b border-gray-600 pb-2"><i class="fa fa-pencil"></i> ویرایش پیام</h2>
-            <p class="text-[11px] sm:text-xs text-yellow-500 mb-2">توجه: در صورت ویرایش پیام خودتان، پیام‌های بعدی حذف شده و پاسخ جدیدی تولید می‌شود.</p>
-            <textarea id="edit-content" class="w-full bg-[#1e1e1e] text-white rounded p-3 outline-none border border-gray-600 h-48 resize-none focus:border-blue-500"></textarea>
+        <div class="bg-[#121212] w-full max-w-lg p-5 md:p-6 rounded-lg shadow-xl border border-gray-700">
+            <h2 class="text-lg md:text-xl mb-4 font-bold border-b border-gray-600 pb-2"><i class="fa fa-pencil"></i> ویرایش پیام</h2>
+            <p class="text-xs text-yellow-500 mb-2">توجه: در صورت ویرایش پیام، پیام‌های بعدی حذف شده و پاسخ جدیدی تولید می‌شود.</p>
+            <textarea id="edit-content" class="w-full bg-[#1e1e1e] text-white rounded p-3 outline-none border border-gray-600 h-40 md:h-48 resize-none focus:border-blue-500 text-sm md:text-base"></textarea>
             <div class="mt-4 flex justify-end gap-2">
-                <button onclick="closeEditModal()" class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition">انصراف</button>
-                <button onclick="saveEditMessage()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition text-sm sm:text-base">اعمال و بازسازی</button>
+                <button onclick="closeEditModal()" class="px-4 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 transition">انصراف</button>
+                <button onclick="saveEditMessage()" class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-500 transition">اعمال و بازسازی</button>
             </div>
         </div>
     </div>
 
     <script>
-        // تنظیمات ورکر برای PDF.js
+        // --- توابع رابط کاربری موبایل ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        // تغییر تابع switchChat تا در موبایل پس از انتخاب منو را ببندد
+        const originalSwitchChat = switchChat;
+        function switchChat(id) {
+            originalSwitchChat(id);
+            if(window.innerWidth < 768) {
+                toggleSidebar();
+            }
+        }
+        // ---------------------------------
+
+        // بقیه کدهای جاوااسکریپت کاملا مشابه نسخه قبلی شما است و نیازی به تغییر ندارد...
+        // ...
+        
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         const API_URL = 'https://passive-chubby-shelf.ngrok-free.dev/v1/chat/completions';
@@ -171,13 +195,14 @@
         let currentChatId = localStorage.getItem('ai_current_chat') || null;
         let settings = JSON.parse(localStorage.getItem('ai_settings')) || { 
             username: 'کاربر', 
-            systemPrompt: 'شما یک دستیار هوش مصنوعی مفید هستید. لطفا برای فرمول‌های ریاضی همیشه از علامت $ استفاده کن.', 
+            systemPrompt: 'شما یک دستیار هوش مصنوعی مفید هستید. لطفا برای فرمول‌های ریاضی همیشه از علامت $$ استفاده کن.', 
             showThink: true 
         };
         
         let abortController = null;
         let isGenerating = false;
         let editingMessageIndex = -1;
+
         let currentAttachments = []; 
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -192,22 +217,14 @@
             updateThinkButtonState();
         });
 
-        // ================= مدیریت سایدبار در موبایل =================
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobile-overlay');
-            sidebar.classList.toggle('translate-x-full');
-            overlay.classList.toggle('hidden');
-        }
-
-        // ================= فایل‌ها و پیوست‌های چندگانه =================
+        // ================= سایر توابع کپی شده از کد اصلی =================
+        // [توابع handleFileUpload, processFile, renderAttachmentPreview, removeAttachment, ...]
+        
         async function handleFileUpload(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
-
-            document.getElementById('send-btn').disabled = true; 
+            document.getElementById('send-btn').disabled = true;
             document.getElementById('send-btn').classList.add('opacity-50');
-
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 if (file.size > 5 * 1024 * 1024) {
@@ -216,10 +233,8 @@
                 }
                 await processFile(file);
             }
-
             renderAttachmentPreview();
             event.target.value = ''; 
-            
             document.getElementById('send-btn').disabled = false;
             document.getElementById('send-btn').classList.remove('opacity-50');
         }
@@ -227,21 +242,18 @@
         function processFile(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
-                
                 if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
                     reader.onload = async function(e) {
                         try {
                             const typedarray = new Uint8Array(e.target.result);
                             const pdf = await pdfjsLib.getDocument(typedarray).promise;
                             let fullText = '';
-                            
                             for (let i = 1; i <= pdf.numPages; i++) {
                                 const page = await pdf.getPage(i);
                                 const textContent = await page.getTextContent();
                                 const pageText = textContent.items.map(item => item.str).join(' ');
                                 fullText += `\n\n--- صفحه ${i} ---\n` + pageText;
                             }
-
                             currentAttachments.push({ type: 'text', data: fullText.trim(), name: file.name });
                         } catch (error) {
                             console.error(`خطا در خواندن فایل PDF ${file.name}:`, error);
@@ -273,35 +285,26 @@
                 previewBox.classList.add('hidden');
                 return;
             }
-            
             previewBox.classList.remove('hidden');
-            let contentHtml = '<div class="flex gap-3 pb-1">';
-            
+            let contentHtml = '<div class="flex gap-3 whitespace-nowrap pb-1">';
             currentAttachments.forEach((att, index) => {
                 if (att.type === 'image') {
-                    contentHtml += `
-                        <div class="relative group p-1 bg-white rounded flex-shrink-0 items-center justify-center inline-block">
+                    contentHtml += `<div class="relative group p-1 bg-white rounded flex-shrink-0 items-center justify-center inline-block">
                             <button onclick="removeAttachment(${index})" class="absolute -top-2 -right-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md transition z-10"><i class="fa fa-times"></i></button>
-                            <img src="${att.data}" class="h-12 w-12 object-contain rounded">
-                        </div>
-                    `;
+                            <img src="${att.data}" class="h-10 w-10 md:h-12 md:w-12 object-contain rounded">
+                        </div>`;
                 } else {
                     const isPdf = att.name.toLowerCase().endsWith('.pdf');
                     const iconClass = isPdf ? 'fa-file-pdf text-red-500' : 'fa-file-alt text-gray-400';
-                    const fileTypeLabel = isPdf ? 'PDF Document' : 'Text File';
-
-                    contentHtml += `
-                        <div class="relative bg-[#353535] rounded-md py-1 px-3 flex-shrink-0 flex flex-col justify-center min-w-[100px] max-w-[150px] inline-block">
+                    contentHtml += `<div class="relative bg-[#353535] rounded-md py-1 px-3 flex-shrink-0 flex flex-col justify-center min-w-[100px] max-w-[140px] inline-block">
                             <button onclick="removeAttachment(${index})" class="absolute -top-2 -right-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md transition z-10"><i class="fa fa-times"></i></button>
                             <div class="flex items-center gap-2">
                                 <div class="flex-1 min-w-0">
                                     <p class="text-xs text-white truncate" dir="ltr" title="${att.name}">${att.name}</p>
-                                    <p class="text-[10px] text-gray-400">${fileTypeLabel}</p>
                                 </div>
-                                <i class="fa ${iconClass} text-xl"></i>
+                                <i class="fa ${iconClass} text-lg md:text-xl"></i>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 }
             });
             contentHtml += '</div>';
@@ -313,7 +316,6 @@
             renderAttachmentPreview();
         }
 
-        // ================= Core Functions =================
         function createNewChat() {
             if (isGenerating) return;
             const newChat = { id: Date.now().toString(), title: 'گفتگوی جدید', messages: [] };
@@ -342,7 +344,6 @@
             renderChatList();
             renderMessages();
             updateStats();
-            if(window.innerWidth < 768) toggleSidebar(); // بستن منو در موبایل بعد از انتخاب
         }
 
         function editChatTitle(id) {
@@ -376,22 +377,22 @@
                 <div class="flex items-center justify-between w-full p-2 rounded-md transition group ${chat.id === currentChatId ? 'bg-gray-700 text-white' : 'hover:bg-gray-800 text-gray-400'}">
                     <button onclick="switchChat('${chat.id}')" class="flex-1 text-right truncate flex items-center text-sm">
                         <i class="fa fa-message ml-2 text-xs opacity-70"></i>
-                        <span class="truncate">${chat.title}</span>
+                        <span class="truncate pr-1">${chat.title}</span>
                     </button>
-                    <div class="flex items-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pr-2 gap-3 md:gap-2 text-sm md:text-xs">
-                        <button onclick="editChatTitle('${chat.id}')" class="hover:text-blue-400 transition-colors" title="ویرایش عنوان"><i class="fa fa-pencil"></i></button>
-                        <button onclick="deleteSingleChat('${chat.id}')" class="hover:text-red-500 transition-colors" title="حذف گفتگو"><i class="fa fa-trash"></i></button>
+                    <div class="flex items-center md:opacity-0 md:group-hover:opacity-100 transition-opacity pr-2 gap-3 text-xs">
+                        <button onclick="editChatTitle('${chat.id}')" class="hover:text-blue-400 transition-colors"><i class="fa fa-pencil"></i></button>
+                        <button onclick="deleteSingleChat('${chat.id}')" class="hover:text-red-500 transition-colors"><i class="fa fa-trash"></i></button>
                     </div>
                 </div>
             `).join('');
-            document.getElementById('chat-title').innerText = getCurrentChat()?.title || 'LM Studio';
+            document.getElementById('chat-title').innerText = getCurrentChat()?.title || 'Artin GPT';
         }
 
         function renderMessages() {
             const container = document.getElementById('chat-container');
             const chat = getCurrentChat();
             if (!chat || chat.messages.length === 0) {
-                container.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-500 space-y-4 opacity-50">
+                container.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-500 space-y-4 opacity-50 mt-10">
                     <i class="fa fa-robot text-5xl md:text-6xl"></i>
                     <p class="text-sm md:text-base">آماده گفتگو با شما</p>
                 </div>`;
@@ -406,13 +407,11 @@
                 if (Array.isArray(rawContent)) {
                     const textObj = rawContent.find(c => c.type === 'text');
                     const imgObjs = rawContent.filter(c => c.type === 'image_url');
-                    
                     if (textObj) textToParse = textObj.text;
-                    
                     if (imgObjs.length > 0) {
                         imageHtml = '<div class="flex flex-wrap gap-2 mb-3">';
                         imgObjs.forEach(img => {
-                            imageHtml += `<img src="${img.image_url.url}" class="max-w-[200px] sm:max-w-xs max-h-48 sm:max-h-64 object-cover rounded-lg shadow-md border border-gray-600">`;
+                            imageHtml += `<img src="${img.image_url.url}" class="max-w-[200px] md:max-w-xs max-h-48 md:max-h-64 object-cover rounded-lg shadow-md border border-gray-600">`;
                         });
                         imageHtml += '</div>';
                     }
@@ -421,7 +420,7 @@
                 }
 
                 if (settings.showThink) {
-                    textToParse = textToParse.replace(/<think>([\s\S]*?)<\/think>/g, '<div class="think-box"><strong>تفکر:</strong><br>$1</div>');
+                    textToParse = textToParse.replace(/<think>([\s\S]*?)<\/think>/g, '<div class="think-box text-xs md:text-sm"><strong>تفکر:</strong><br>$1</div>');
                 } else {
                     textToParse = textToParse.replace(/<think>([\s\S]*?)<\/think>/g, '');
                 }
@@ -431,16 +430,16 @@
 
                 return `
                 <div class="flex flex-col ${msg.role === 'user' ? 'items-start message-user' : 'items-start message-bot'} p-3 md:p-4 rounded-lg w-full relative group border border-transparent hover:border-gray-700 transition-colors">
-                    <div class="font-bold mb-2 text-xs md:text-sm text-gray-400 flex items-center w-full">
+                    <div class="font-bold mb-2 text-[13px] md:text-sm text-gray-400 flex items-center w-full">
                         <i class="fa ${msg.role === 'user' ? 'fa-user text-blue-500' : 'fa-robot text-green-500'} ml-2"></i>
                         ${msg.role === 'user' ? settings.username : 'دستیار هوش مصنوعی'}
-                        <div class="mr-auto flex items-center gap-3">
-                            <button onclick="deleteMessage(${index})" class="text-gray-500 hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" title="حذف پیام"><i class="fa fa-trash"></i></button>
-                            <button onclick="openEditModal(${index})" class="text-gray-500 hover:text-blue-400 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" title="ویرایش پیام"><i class="fa fa-pencil"></i></button>
+                        <div class="mr-auto flex items-center gap-3 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                            <button onclick="deleteMessage(${index})" class="text-gray-500 hover:text-red-500" title="حذف پیام"><i class="fa fa-trash"></i></button>
+                            <button onclick="openEditModal(${index})" class="text-gray-500 hover:text-blue-400" title="ویرایش پیام"><i class="fa fa-pencil"></i></button>
                             <span class="text-[10px] md:text-xs text-gray-600 font-normal">${msg.time || ''}</span>
                         </div>
                     </div>
-                    <div class="markdown-body w-full overflow-hidden text-sm leading-relaxed">${finalContent}</div>
+                    <div class="markdown-body w-full overflow-hidden text-[13px] md:text-sm leading-relaxed">${finalContent}</div>
                 </div>`;
             }).join('');
             
@@ -448,8 +447,8 @@
                 delimiters: [
                     {left: '$$', right: '$$', display: true},
                     {left: '$', right: '$', display: false},
-                    {left: '\\\\(', right: '\\\\)', display: false},
-                    {left: '\\\\[', right: '\\\\]', display: true}
+                    {left: '\\\\\(', right: '\\\\\)', display: false},
+                    {left: '\\\\\[', right: '\\\\\]', display: true}
                 ],
                 throwOnError: false
             });
@@ -470,7 +469,7 @@
                     if (Array.isArray(m.content)) {
                         const txt = m.content.find(c => c.type === 'text')?.text || '';
                         const imgCount = m.content.filter(c => c.type === 'image_url').length;
-                        totalChars += txt.length + (imgCount * 500); 
+                        totalChars += txt.length + (imgCount * 500);
                     } else {
                         totalChars += m.content.length;
                     }
@@ -502,12 +501,10 @@
             if (isGenerating) return;
             editingMessageIndex = index;
             const chat = getCurrentChat();
-            
             let txtContent = chat.messages[index].content;
             if (Array.isArray(txtContent)) {
                 txtContent = txtContent.find(c => c.type === 'text')?.text || '';
             }
-            
             document.getElementById('edit-content').value = txtContent;
             document.getElementById('edit-modal').classList.remove('hidden');
         }
@@ -522,7 +519,6 @@
                 const chat = getCurrentChat();
                 const isUserMessage = chat.messages[editingMessageIndex].role === 'user';
                 const newTextContent = document.getElementById('edit-content').value;
-                
                 if (Array.isArray(chat.messages[editingMessageIndex].content)) {
                     const imgObjs = chat.messages[editingMessageIndex].content.filter(c => c.type === 'image_url');
                     chat.messages[editingMessageIndex].content = [
@@ -532,7 +528,6 @@
                 } else {
                     chat.messages[editingMessageIndex].content = newTextContent;
                 }
-                
                 if (isUserMessage) {
                     chat.messages = chat.messages.slice(0, editingMessageIndex + 1);
                     saveData();
@@ -542,3 +537,245 @@
                     await fetchAIResponse(chat);
                 } else {
                     saveData();
+                    renderMessages();
+                    updateStats();
+                    closeEditModal();
+                }
+            }
+        }
+
+        function handleKeydown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                if (window.innerWidth > 768) { 
+                    e.preventDefault();
+                    sendMessage();
+                }
+            }
+        }
+
+        function toggleQuickThink() {
+            settings.showThink = !settings.showThink;
+            saveData();
+            updateThinkButtonState();
+            renderMessages();
+        }
+
+        function updateThinkButtonState() {
+            const btn = document.getElementById('quick-think-btn');
+            const text = document.getElementById('think-status-text');
+            if(settings.showThink) {
+                btn.classList.add('text-green-500');
+                btn.classList.remove('text-gray-400');
+                text.innerText = 'تفکر روشن';
+            } else {
+                btn.classList.remove('text-green-500');
+                btn.classList.add('text-gray-400');
+                text.innerText = 'تفکر خاموش';
+            }
+        }
+
+        async function sendMessage() {
+            if (isGenerating) return;
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text && currentAttachments.length === 0) return; 
+
+            const chat = getCurrentChat();
+            const timeStr = new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+            
+            let combinedText = text;
+            let imageObjects = [];
+
+            currentAttachments.forEach(att => {
+                if (att.type === 'text') {
+                    combinedText += `\n\n--- محتوای فایل: ${att.name} ---\n${att.data}\n--- پایان فایل ---`;
+                } else if (att.type === 'image') {
+                    imageObjects.push({ type: "image_url", image_url: { url: att.data } });
+                }
+            });
+
+            let userContent;
+            if (imageObjects.length > 0) {
+                userContent = [
+                    { type: "text", text: combinedText || "این تصاویر را بررسی کن." },
+                    ...imageObjects
+                ];
+            } else {
+                userContent = combinedText;
+            }
+
+            chat.messages.push({ role: 'user', content: userContent, time: timeStr });
+            if (chat.title === 'گفتگوی جدید') chat.title = text ? text.substring(0, 30) + '...' : (currentAttachments.length > 0 ? 'ارسال چند فایل' : '...');
+            
+            input.value = '';
+            input.style.height = 'auto';
+            currentAttachments = [];
+            renderAttachmentPreview(); 
+            
+            updateStats();
+            renderChatList();
+            renderMessages();
+            
+            await fetchAIResponse(chat);
+        }
+
+        async function fetchAIResponse(chat) {
+            isGenerating = true;
+            abortController = new AbortController();
+            
+            document.getElementById('send-btn').classList.add('hidden');
+            document.getElementById('stop-btn').classList.remove('hidden');
+
+            const timeStr = new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+            chat.messages.push({ role: 'assistant', content: '', time: timeStr });
+            const botMsgIndex = chat.messages.length - 1;
+
+            try {
+                let finalSystemPrompt = settings.systemPrompt;
+                if (settings.username && settings.username !== 'کاربر') {
+                    finalSystemPrompt += `\n\n(Information: The user you are talking to is named "${settings.username}").`;
+                }
+
+                if (!settings.showThink) {
+                    finalSystemPrompt += "\n\nCRITICAL INSTRUCTION: DO NOT use <think> tags. Answer directly without providing internal thoughts.";
+                }
+
+                const apiMessages = [{ role: 'system', content: finalSystemPrompt }];
+                chat.messages.slice(0, -1).forEach(m => apiMessages.push({ role: m.role, content: m.content }));
+
+                const requestBody = {
+                    model: "local-model",
+                    messages: apiMessages,
+                    stream: true,
+                    temperature: 0.7,
+                    enable_thinking: settings.showThink
+                };
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody),
+                    signal: abortController.signal
+                });
+
+                if (!response.ok) throw new Error('خطا در ارتباط با سرور.');
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n').filter(line => line.trim() !== '');
+                    
+                    for (const line of lines) {
+                        if (line.includes('[DONE]')) break;
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                if (data.choices[0].delta.content) {
+                                    chat.messages[botMsgIndex].content += data.choices[0].delta.content;
+                                    renderMessages();
+                                    updateStats(); 
+                                }
+                            } catch (e) { }
+                        }
+                    }
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    chat.messages[botMsgIndex].content += '\n\n*(تولید متن متوقف شد)*';
+                } else {
+                    chat.messages[botMsgIndex].content += `\n\n**[خطا]** ${error.message}`;
+                }
+                renderMessages();
+                updateStats();
+            } finally {
+                isGenerating = false;
+                saveData();
+                document.getElementById('send-btn').classList.remove('hidden');
+                document.getElementById('stop-btn').classList.add('hidden');
+            }
+        }
+
+        function stopGeneration() {
+            if (abortController) {
+                abortController.abort();
+            }
+        }
+
+        function clearChats() {
+            if(confirm('آیا از حذف تمام گفتگوها اطمینان دارید؟')) {
+                localStorage.removeItem('ai_chats');
+                localStorage.removeItem('ai_current_chat');
+                chats = [];
+                createNewChat();
+            }
+        }
+
+        function exportChat() {
+            const chat = getCurrentChat();
+            if (!chat) return;
+            let text = `${chat.title}\n\n`;
+            chat.messages.forEach(m => {
+                let contentText = m.content;
+                if (Array.isArray(contentText)) {
+                    contentText = contentText.find(c => c.type === 'text')?.text || '[محتوای تصویری]';
+                }
+                text += `[${m.role === 'user' ? settings.username : 'AI'}] - ${m.time}\n${contentText}\n\n-----------------\n\n`;
+            });
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ChatExport_${Date.now()}.txt`;
+            a.click();
+        }
+
+        function toggleSettings() {
+            const modal = document.getElementById('settings-modal');
+            if (modal.classList.contains('hidden')) {
+                document.getElementById('set-username').value = settings.username;
+                document.getElementById('set-system').value = settings.systemPrompt;
+                document.getElementById('set-think').checked = settings.showThink;
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function saveSettings() {
+            settings.username = document.getElementById('set-username').value || 'کاربر';
+            settings.systemPrompt = document.getElementById('set-system').value;
+            settings.showThink = document.getElementById('set-think').checked;
+            saveData();
+            updateThinkButtonState();
+            toggleSettings();
+            renderMessages();
+            updateStats();
+        }
+
+        document.getElementById('message-input').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        function toggleVoice() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert('مرورگر شما از تایپ صوتی پشتیبانی نمی‌کند.');
+                return;
+            }
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'fa-IR';
+            recognition.onresult = (event) => {
+                document.getElementById('message-input').value += event.results[0][0].transcript + ' ';
+                updateStats();
+            };
+            recognition.start();
+        }
+    </script>
+</body>
+</html>
