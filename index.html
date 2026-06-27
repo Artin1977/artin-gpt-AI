@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Artin gpt Web UI V2.3(Responsive)</title>
+    <title>Artin gpt Web UI V2.3(LO)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
@@ -182,7 +182,8 @@
         
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        const API_URL = 'https://passive-chubby-shelf.ngrok-free.dev/v1/chat/completions';
+        const API_URL = 'http://100.98.22.63:1234/v1/chat/completions';
+
 
         const MAX_TOKENS = 36671;
         let chats = JSON.parse(localStorage.getItem('ai_chats')) || [];
