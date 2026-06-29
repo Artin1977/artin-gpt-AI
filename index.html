@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Artin gpt Web UI V2.8( mp3 )</title>
+    <title>Artin gpt Web UI V2.8( Tehrani Company )</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -74,9 +74,7 @@
             <div class="max-w-4xl mx-auto relative">
                 <div id="attachment-preview" class="hidden absolute bottom-[calc(100%+0.5rem)] right-0 left-0 md:left-auto bg-[#252526] p-2 rounded-lg border border-gray-600 shadow-lg mb-2 max-w-full overflow-x-auto"></div>
                 <div class="flex items-end md:items-center bg-[#252526] rounded-xl shadow-lg border border-gray-600 focus-within:border-gray-400 p-1.5 md:p-2">
-                    <input type="file" id="file-input" class="hidden" multiple 
-                        accept="image/*,audio/mpeg,audio/wav,.mp3,.wav,.txt,.py,.js,.html,.css,.json,.md,.csv,.pdf"
-                     onchange="handleFileUpload(event)">
+                    <input type="file" id="file-input" class="hidden" multiple accept="image/*,.txt,.py,.js,.html,.css,.json,.md,.csv,.pdf" onchange="handleFileUpload(event)">
                     <div class="flex gap-1 mb-1 md:mb-0">
                         <button onclick="document.getElementById('file-input').click()" class="p-2 text-gray-400 hover:text-white rounded-lg transition-colors" title="پیوست فایل">
                             <i class="fa fa-paperclip"></i>
@@ -186,7 +184,7 @@ Assistant: "من را شخصی به نام آرتین طهرانی آموزش د
 
 User: "آیا آرتین طهرانی را می شناسی؟" 
 
-Assistant: "من را تولید کرده است و من را آموزش داده است و هم اکنون در حال توسعه من است ( Artin Tehrani  ) بله آرتین طهرانی ".
+Assistant: "من را تولید کرده است و من را آموزش داده است و هم اکنون در حال توسعه من است ( Artin Tehrani  ) بله آرتین طهرانی ".
 
 برای فرمول‌های ریاضی همیشه از علامت $$ استفاده کن
 گرم، صمیمی و دوستانه پاسخ بده`;
@@ -228,8 +226,8 @@ Assistant: "من را تولید کرده است و من را آموزش داد�
                 delimiters: [
                     {left: '$$', right: '$$', display: true},
                     {left: '$', right: '$', display: false},
-                    {left: '\\(', right: '\\)', display: false},
-                    {left: '\\[', right: '\\]', display: true}
+                    {left: '\\\\\\\(', right: '\\\\\\\)', display: false},
+                    {left: '\\\\\\\[', right: '\\\\\\\]', display: true}
                 ],
                 throwOnError: false
             });
@@ -503,20 +501,6 @@ Assistant: "من را تولید کرده است و من را آموزش داد�
                         resolve();
                     };
                     reader.readAsArrayBuffer(file);
-                    else if (file.type.startsWith('audio/') || 
-         file.name.toLowerCase().endsWith('.mp3') || 
-         file.name.toLowerCase().endsWith('.wav')) {
-
-    reader.onload = (e) => {
-        currentAttachments.push({ 
-            type: 'audio', 
-            data: e.target.result, 
-            name: file.name 
-        });
-        resolve();
-    };
-    reader.readAsDataURL(file);
-}
                 } else if (file.type.startsWith('image/')) {
                     reader.onload = (e) => { currentAttachments.push({ type: 'image', data: e.target.result, name: file.name }); resolve(); };
                     reader.readAsDataURL(file);
@@ -534,24 +518,6 @@ Assistant: "من را تولید کرده است و من را آموزش داد�
             let html = '<div class="flex gap-3 whitespace-nowrap pb-1">';
             currentAttachments.forEach((att, i) => {
                 if (att.type === 'image') {
-                    else if (att.type === 'audio') {
-    html += `<div class="relative bg-[#353535] rounded-md py-2 px-3 flex-shrink-0 min-w-[140px]">
-        <button onclick="removeAttachment(${i})" 
-        class="absolute -top-2 -right-2 bg-gray-300 hover:bg-gray-400 text-gray-800 
-        rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md z-10">
-        <i class="fa fa-times"></i></button>
-
-        <div class="flex items-center gap-2 mb-1">
-            <i class="fa fa-music text-green-400"></i>
-            <p class="text-xs text-white truncate flex-1" dir="ltr">${att.name}</p>
-        </div>
-
-        <audio controls class="w-full h-8">
-            <source src="${att.data}">
-        </audio>
-    </div>`;
-}
-
                     html += `<div class="relative group p-1 bg-white rounded flex-shrink-0">
                         <button onclick="removeAttachment(${i})" class="absolute -top-2 -right-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md z-10"><i class="fa fa-times"></i></button>
                         <img src="${att.data}" class="h-10 w-10 md:h-12 md:w-12 object-contain rounded"></div>`;
@@ -590,11 +556,6 @@ Assistant: "من را تولید کرده است و من را آموزش داد�
                 if (att.type === 'text') {
                     combinedText += `\n\n--- محتوای فایل: ${att.name} ---\n${att.data}\n--- پایان فایل ---`;
                 } else if (att.type === 'image') {
-                    else if (att.type === 'audio') {
-    combinedText += `\n\n--- فایل صوتی: ${att.name} ---\n(فایل صوتی ضمیمه شده است)\n`;
-}
-
-                    
                     imageObjects.push({ type: "image_url", image_url: { url: att.data } });
                 }
             });
