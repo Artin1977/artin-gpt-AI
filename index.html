@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Artin gpt Web UI V2.8( Tehrani Company )</title>
+    <title>Artin gpt Web UI V2.7( Tehrani Company )</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -314,11 +314,14 @@ Assistant: "من را تولید کرده است و من را آموزش داد�
             const lastWrapper = msgWrappers[msgWrappers.length - 1];
             const mdBody = lastWrapper.querySelector('.markdown-body');
             if (!mdBody) return;
+            
             mdBody.innerHTML = getRenderedContent(rawText) + (isStreaming ? '<span class="typing-cursor"></span>' : '');
-            if (!isStreaming) renderMathInEl(mdBody);
+            
+            // این خط تغییر کرده است (شرط if برداشته شد تا همیشه رندر شود)
+            renderMathInEl(mdBody); 
+            
             container.scrollTop = container.scrollHeight;
         }
-
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('translate-x-full');
             document.getElementById('sidebar-overlay').classList.toggle('hidden');
